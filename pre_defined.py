@@ -3,6 +3,7 @@ from sklearn.tree import DecisionTreeClassifier
 from sklearn.model_selection import train_test_split
 import pandas as pd
 from sklearn.metrics import classification_report
+from sklearn.ensemble import RandomForestClassifier
 
 """
 A file of pre-defined functions for use in the project.
@@ -38,21 +39,22 @@ def normalise_and_encode(data, data_y, **kwargs):
         if data[col].dtype == 'object':
             # if we are using a decision tree classifier, then label encode only the target column
             if 'dct' in kwargs:
+                # if column to predict is non numerical, then use label encoding
                 if col == data_y:
                     le = preprocessing.LabelEncoder()
                     data[col] = le.fit_transform(data[col])
-            # if not a dct, then label encode all non-numerical columns
-            else:
+            # label encode all non-numerical columns
+            if kwargs['encoding'] == 'Label Encoding':
                 le = preprocessing.LabelEncoder()
                 data[col] = le.fit_transform(data[col])
         # normalise numerical data         
-        elif data[col].dtype != 'object':
-            min_max_scaler = preprocessing.MinMaxScaler()
+        elif data[col].dtype != 'object' and col != data_y:
+            min_max_scaler = preprocessing.StandardScaler()
             x_scaled = min_max_scaler.fit_transform(data[col].values.reshape(-1, 1))
             data[col] = x_scaled
 
     # one hot encode categorical data for decision tree classifier
-    if 'dct' in kwargs:
+    if kwargs['encoding'] == 'One Hot Encoding':
         data = pd.get_dummies(data)
     return data
 
@@ -66,7 +68,7 @@ def split_data(x,y):
 """
 Decison Tree Classifier Function
     simple decisions tree classifer
-    @returns: model, mean accuracy score
+    @returns: model, mean accuracy score, model, report
 """
 def decision_tree_classifier(df, data_y):
     x = df.drop(data_y, axis=1)
@@ -76,5 +78,19 @@ def decision_tree_classifier(df, data_y):
     model_dt.fit(x_train, y_train)
     y_pred = model_dt.predict(x_test)
     report = classification_report(y_test, y_pred, labels = [0,1], output_dict=True)
-
     return model_dt, y_pred, model_dt.score(x_test,y_test), report
+
+"""
+Random Forest Classifier Function
+    simple classifer
+    @returns: model, mean accuracy score, model, report
+"""
+def random_forest_classifier(df, data_y):
+    x = df.drop(data_y, axis=1)
+    y = df[data_y]
+    x_train, x_test, y_train, y_test = split_data(x,y)
+    model_rf = RandomForestClassifier(criterion='entropy',random_state=100,max_depth=20, min_samples_leaf=5, n_estimators=40)
+    model_rf.fit(x_train, y_train)
+    y_pred = model_rf.predict(x_test)
+    report = classification_report(y_test, y_pred, labels = [0,1], output_dict=True)
+    return model_rf, y_pred , model_rf.score(x_test,y_test) , report

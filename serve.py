@@ -4,9 +4,8 @@ import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 from dtreeviz.trees import dtreeviz
-import streamlit.components.v1 as components
 import openai
-from pre_defined import normalise_and_encode, get_good_correlation, decision_tree_classifier
+from pre_defined import normalise_and_encode, get_good_correlation, decision_tree_classifier, random_forest_classifier
 
 openai.api_key = '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'
 
@@ -90,37 +89,55 @@ def main():
         # output all columns in dataframe
         st.write(columns, scrolling=True)
 
-        st.subheader("What is your column of interest?", columns)
+        st.write(df.describe())
+
+        st.dataframe(df.head())
+
+        st.subheader("What is your variable of interest?", columns)
         data_y = st.selectbox('', options=columns)
 
-        radio_option = st.radio('What do you want to do?', ('EDA', 'Model'))
+        radio_option = st.radio('What do you want to do?', ('EDA', 'Model Data'))
 
         if radio_option == 'EDA':
             general_eda(df, data_y)
-        elif radio_option == 'Model':
+        elif radio_option == 'Model Data':
             radio_option = st.radio('What model do you want to use?', ('Decision Tree', 'Linear Regression', 'Random Forest', 'Logistic Regression'))
             if radio_option == 'Decision Tree':
-                df = normalise_and_encode(df, data_y, dct=True)
-                model, predicted, score, report = decision_tree_classifier(df, data_y=data_y)
-                st.write(f'The model score is {score}')
-                st.subheader('Model Report')
-                st.table(report)   
-                viz = dtreeviz(
-                        model,
-                        x_data = df.drop(data_y, axis=1),
-                        y_data = df[data_y],
-                        target_name = data_y,
-                        feature_names = df.drop(data_y, axis=1).columns,
-                        class_names = ['Churned', 'Not Churned'],
+                encoding = st.radio('What encoding do you want to perform on your data?', ('One Hot Encoding', 'Label Encoding', 'No Encoding'))
+                if st.button('Create model'):
+                    df = normalise_and_encode(
+                        df, 
+                        data_y, 
+                        dct=True, 
+                        encoding=encoding
                     )
-                svg_write(viz.svg())
+                    model, predicted, score, report = decision_tree_classifier(df, data_y=data_y)
+                    st.write(f'The model score is {score}')
+                    st.subheader('Model Report')
+                    st.table(report)   
+                    viz = dtreeviz(
+                            model,
+                            x_data = df.drop(data_y, axis=1),
+                            y_data = df[data_y],
+                            target_name = data_y,
+                            feature_names = df.drop(data_y, axis=1).columns,
+                            class_names = ['Churned', 'Not Churned'],
+                        )
+                    svg_write(viz.svg())
                        
             elif radio_option == 'Linear Regression':
                 options = st.multiselect('Select columns to model', columns)
                 st.write('You selected:', options)
-                pass
+
             elif radio_option == 'Random Forest':
-                pass
+                encoding = st.radio('What encoding do you want to perform on your data?', ('One Hot Encoding', 'Label Encoding', 'No Encoding'))
+                if st.button('Create model'):
+                    df = normalise_and_encode(df, data_y, dct=True, encoding=encoding)
+                    model, predicted, score, report = random_forest_classifier(df, data_y=data_y)
+                    st.write(f'The model score is {score}')
+                    st.subheader('Model Report')
+                    st.table(report)
+    
             elif radio_option == 'Logistic Regression':
                 pass
         

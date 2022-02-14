@@ -1,0 +1,7 @@
+openai
+seaborn
+pandas
+scikit-learn
+matplotlib
+numpy
+dtreeviz

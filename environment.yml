@@ -1,2 +1,2 @@
 dependencies:
-  - python-dtreeviz
+  - python-graphviz

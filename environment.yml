@@ -1,6 +1,7 @@
 channels:
   - conda
   - conda-forge
+  - anaconda
 dependencies:
   - python-graphviz
   - openai

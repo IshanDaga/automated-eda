@@ -1,9 +1,14 @@
+from matplotlib import pyplot as plt
 from sklearn import preprocessing
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.model_selection import train_test_split
 import pandas as pd
 from sklearn.metrics import classification_report
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.linear_model import LinearRegression, LogisticRegression
+from sklearn.metrics import f1_score, accuracy_score
+from sklearn.metrics import confusion_matrix
+import seaborn as sns
 
 """
 A file of pre-defined functions for use in the project.
@@ -44,11 +49,11 @@ def normalise_and_encode(data, data_y, **kwargs):
                     le = preprocessing.LabelEncoder()
                     data[col] = le.fit_transform(data[col])
             # label encode all non-numerical columns
-            if kwargs['encoding'] == 'Label Encoding':
+            elif kwargs['encoding'] == 'Label Encoding':
                 le = preprocessing.LabelEncoder()
                 data[col] = le.fit_transform(data[col])
         # normalise numerical data         
-        elif data[col].dtype != 'object' and col != data_y:
+        elif data[col].dtype != 'object' and col != data_y and 'only_encode' in kwargs:
             min_max_scaler = preprocessing.StandardScaler()
             x_scaled = min_max_scaler.fit_transform(data[col].values.reshape(-1, 1))
             data[col] = x_scaled
@@ -56,6 +61,14 @@ def normalise_and_encode(data, data_y, **kwargs):
     # one hot encode categorical data for decision tree classifier
     if kwargs['encoding'] == 'One Hot Encoding':
         data = pd.get_dummies(data)
+    
+    # no encoding drops all non-numerical data
+    if kwargs['encoding'] == 'No Encoding':
+        y = data[data_y]
+        for col in data.columns:
+            if data[col].dtype == 'object':
+                data = data.drop(col, axis=1)
+        data[data_y] = y
     return data
 
 """
@@ -94,3 +107,38 @@ def random_forest_classifier(df, data_y):
     y_pred = model_rf.predict(x_test)
     report = classification_report(y_test, y_pred, labels = [0,1], output_dict=True)
     return model_rf, y_pred , model_rf.score(x_test,y_test) , report
+
+
+"""
+Logistic Regression with Cross Validation
+    simple LR
+    @returns: model, mean accuracy score, model, report
+"""
+def logistic_regression(df, data_y):
+     x = df.drop(data_y, axis=1)
+     y = df[data_y]
+     x_train, x_test, y_train, y_test = split_data(x,y)
+     model_lr = LogisticRegression(max_iter=1000, random_state=100)
+     model_lr.fit(x_train, y_train)
+     y_pred = model_lr.predict(x_test)
+     report = classification_report(y_test, y_pred, labels = [0,1], output_dict=True)
+     conf_matrix = confusion_matrix(y_test, y_pred)
+     return model_lr, model_lr.score(x,y) , report, conf_matrix
+
+
+"""
+Linear Regression
+returns: model, predicted, mean accuracy score
+"""
+def linear_regression(df, data_y):
+    x = df.drop(data_y, axis=1)
+    y = df[data_y]
+    x_train, x_test, y_train, y_test = split_data(x,y)
+    model_lr = LinearRegression(fit_intercept=True, normalize=True, copy_X=True, n_jobs=-1)
+    model_lr.fit(x_train, y_train)
+    y_pred = model_lr.predict(x_test)
+    score = model_lr.score(x_test,y_test)
+    fig, ax = plt.subplots()
+    for col in x.columns:
+        sns.regplot(x=x[col], y=data_y, data=df, ax=ax)
+    return model_lr, y_pred, score, fig
